@@ -68,46 +68,52 @@ Future<void> _saveTasks() async {
   await prefs.setStringList('tasks', toSave);
 }
 
-  void _addTask() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        String newTaskText = '';
-        
-        return AlertDialog(
-          title: const Text('Добавить задачу'),
-          content: TextField(
-            autofocus: true,
-            decoration: const InputDecoration(hintText: 'Введите текст задачи'),
-            onChanged: (value) {
-              newTaskText = value;
-            },
+void _addTask() async {
+  print('[_addTask] called'); // Увидишь в консоли при нажатии кнопки
+
+  final TextEditingController controller = TextEditingController();
+  
+  final result = await showDialog<String>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('Добавить задачу'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Введите текст задачи'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text('Отмена'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Отмена'),
-            ),
-            TextButton(
-              onPressed: () {
-                if (newTaskText.isNotEmpty) {
-                  setState(() {
-                    tasks.add({
-  'text': newTaskText,
-  'completed': false,
-});
-                    _saveTasks(); // Сохраняем после добавления
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text('Добавить'),
-            ),
-          ],
-        );
-      },
-    );
+          TextButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                Navigator.pop(context, controller.text.trim());
+              }
+            },
+            child: const Text('Добавить'),
+          ),
+        ],
+      );
+    },
+  );
+
+
+  // Если пользователь ввёл текст
+  if (result != null && result.isNotEmpty) {
+    print('[_addTask] adding task: $result');
+    setState(() {
+      tasks.add({
+        'text': result,
+        'completed': false,
+      });
+    });
+    _saveTasks(); // Сохраняем
   }
+}
 
   void _deleteTask(int index) {
     setState(() {
@@ -131,12 +137,14 @@ Future<void> _saveTasks() async {
               margin: const EdgeInsets.all(8.0),
               child: ListTile(
                 leading: Checkbox(
-  value: tasks[index]['completed'], // Берём значение completed
+  value: tasks[index]['completed'],
   onChanged: (newValue) {
-    setState(() {
-      tasks[index]['completed'] = newValue ?? false; // Обновляем
-      _saveTasks(); // Сохраняем
-    });
+    if (newValue != null) { // ← Добавляем проверку!
+      setState(() {
+        tasks[index]['completed'] = newValue;
+        _saveTasks();
+      });
+    }
   },
 ),
                 title: Text(
